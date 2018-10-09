@@ -1,0 +1,148 @@
+<html>
+<head>
+<title>CFD</title>
+</head>
+<script>
+function vec(x,y){
+	this.x=x;
+	this.y=y;
+	this.abs=function(){
+		return Math.sqrt(Math.pow(this.x,2)+Math.pow(this.y,2));
+	}
+}
+function vecfield(x,y){
+	this.x=x;
+	this.y=y;
+	this.f=new Array(x);
+	for(i=0;i<x;i++){
+		this.f[i]=new Array(y);
+		for(j=0;j<y;j++){
+			this.f[i][j]=new vec(0,0);
+		}
+	}
+	this.mul=function(a){
+	var r=new vecfield(this.x,this.y);
+		for(i=0;i<this.x;i++){
+			for(j=0;j<this.y;j++){
+				r.f[i][j]=new vec(this.f[i][j].x*a,this.f[i][j].y*a);
+			}
+		}
+	return r;	
+	}
+}
+function field(x,y){
+	this.x=x;
+	this.y=y;
+	this.f=new Array(x);
+	for(i=0;i<x;i++){
+		this.f[i]=new Array(y);
+		for(j=0;j<y;j++){
+			this.f[i][j]=0;
+		}
+	}
+}
+function diff(f){
+	r=new vecfield(f.x,f.y);
+	for(i=1;i<f.x-1;i++){
+		for(j=1;j<f.y-1;j++){
+			r.f[i][j]=new vec((f.f[i+1][j]-f.f[i-1][j])/2,(f.f[i][j+1]-f.f[i][j-1])/2);
+		}
+	}
+	return r;
+}
+function conf(f){
+	r=new vecfield(f.x,f.y);
+	for(i=1;i<f.x-1;i++){
+		for(j=1;j<f.y-1;j++){
+			r.f[i][j]=new vec((f.f[i+1][j].x-f.f[i-1][j].x)*f.f[i][j].x/2,(f.f[i][j+1].y-f.f[i][j-1].y)*f.f[i][j].y/2);
+		}
+	}
+	return r;
+}
+
+function laplace(f){
+	r=new field(f.x,f.y);
+	for(i=1;i<f.x-1;i++){
+		for(j=1;j<f.y-1;j++){
+			r.f[i][j]=f.f[i+1][j]+f.f[i-1][j]+f.f[i][j+1]+f.f[i][j-1]-4*f.f[i][j];
+		}
+	}
+	return r;
+}
+function veclaplace(f){
+	r=new vecfield(f.x,f.y);
+	for(i=1;i<f.x-1;i++){
+		for(j=1;j<f.y-1;j++){
+			r.f[i][j]=new vec(f.f[i+1][j].x+f.f[i-1][j].x+f.f[i][j+1].x+f.f[i][j-1].x-4*f.f[i][j].x,f.f[i+1][j].y+f.f[i-1][j].y+f.f[i][j+1].y+f.f[i][j-1].y-4*f.f[i][j].y);
+		}
+	}
+	return r;
+}
+
+
+function fieldadd(a,b){
+	r=new vecfield(f.x,f.y);
+	for(i=0;i<f.x;i++){
+		for(j=0;j<f.y;j++){
+			r.f[i][j]=new vec(b.f[i][j].x+a.f[i][j].x,a.f[i][j].y+b.f[i][j].y);
+		}
+	}
+	return r;
+}
+function init(){
+p=new field(100,100);
+v=new vecfield(100,100);
+dt=0.01;
+rho=0.1;
+miu=1;
+a=new vecfield(100,100);
+f=new vecfield(100,100);
+	for(i=1;i<100-1;i++){
+		for(j=1;j<100-1;j++){
+			if(i>30&&i<70&&j>10&&j<20) f.f[i][j]=new vec(0,1);
+		}
+	}
+	
+ctx=document.getElementById("cvs").getContext("2d");
+dat=ctx.createImageData(100,100);
+data=dat.data;
+	for(i=1;i<100-1;i++){
+		for(j=1;j<100-1;j++){
+			data[4*(i*100+j)+0]=0;
+			data[4*(i*100+j)+1]=0;
+			data[4*(i*100+j)+2]=0;
+			data[4*(i*100+j)+3]=255;
+			//console.log(v.f[i][j].abs());
+		}
+	}
+	ctx.putImageData(dat,0,0);
+}
+function step(){
+	a=fieldadd(fieldadd(f,veclaplace(v).mul(miu)),conf(v).mul(-1)).mul(1/rho);
+	v=fieldadd(v,a.mul(dt));
+	//m=a.mul(dt);
+	var maxv=0;
+	for(i=0;i<100;i++){
+		for(j=0;j<100;j++){
+			if(maxv<v.f[i][j].abs()) maxv=v.f[i][j].abs();	
+			//console.log(' '+v.f[i][j].abs()+'i'+i+'j'+j);
+		}
+	}
+	for(i=0;i<100;i++){
+		for(j=0;j<100;j++){
+			data[4*(i*100+j)+0]=255*(v.f[i][j].abs()/maxv);
+			data[4*(i*100+j)+1]=0;
+			data[4*(i*100+j)+2]=255*(1-(v.f[i][j].abs()/maxv));
+			data[4*(i*100+j)+3]=255;
+			//console.log(maxv);
+		}
+	}
+	console.log(data)
+	ctx.putImageData(dat,0,0,0,0,100,100);
+}
+</script>
+<body onload="init()">
+<canvas id="cvs" width="100" height="100"></canvas>
+<button onclick="setInterval(step,100)">RUN!</button>
+</body>
+</html>
